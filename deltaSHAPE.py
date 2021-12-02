@@ -28,7 +28,6 @@ import sys
 import os
 import argparse
 import numpy as np
-import scipy.stats as stats
 from operator import itemgetter
 from itertools import groupby
 import warnings
@@ -43,7 +42,10 @@ def open_map(filename, front, back, sep=None):
             "ERROR: Input file "
             + filename
             + " contains fewer than 4 data columns. Please provide a file in .map format. See the README for details."
-            + "\nseparator used is \"" + str(sep) +"\""
+            + '\nseparator used is "'
+            + str(sep)
+            + '" to change it use --sep '
+            + 'argument. for shapemapper2 .map files : --sep "," '
         )
     data = np.array([float(i.split(sep)[1]) for i in datalines])
     errs = np.array([float(i.split(sep)[2]) for i in datalines])
@@ -71,7 +73,7 @@ def smooth(data, err, pad):
     # create a list ("mask") to store which positions to ignore later.
     mask = []
     for i in range(len(data)):
-        if data[i] == -999 or np.isnan(data[i]) == True:
+        if data[i] == -999 or np.isnan(data[i]):
             mask.append(i)
     # you can't center a window at the first nucleotide so mask until a full centered window can be placed
     for i in range(pad):
@@ -83,19 +85,19 @@ def smooth(data, err, pad):
         new_data.append(
             np.mean(
                 np.ma.MaskedArray(
-                    [j for j in data[i - pad : i + pad + 1]],
-                    np.isnan([j for j in data[i - pad : i + pad + 1]]),
+                    [j for j in data[i - pad: i + pad + 1]],
+                    np.isnan([j for j in data[i - pad: i + pad + 1]]),
                 )
             )
         )
 
         # use stats.nanmean to calculate average without including no-data (nan) nucleotides. This causes long_scalars runtime warnings.
         # new_data.append(stats.nanmean([j for j in data[i-pad:i+pad+1] if np.isnan(j) != True]))
-        errs = np.array(err[i - pad : i + pad + 1])
-        squerrs = np.power([j for j in errs if np.isnan(j) != True], 2)
+        errs = np.array(err[i - pad: i + pad + 1])
+        squerrs = np.power([j for j in errs if not np.isnan(j)], 2)
         total = np.sum(squerrs)
         sqrt = np.sqrt(total)
-        new_err.append(sqrt / len(data[i - pad : i + pad + 1]))
+        new_err.append(sqrt / len(data[i - pad: i + pad + 1]))
     for i in range(pad):
         new_data.append(np.nan)
         new_err.append(np.nan)
@@ -131,16 +133,16 @@ def calc_zScores(diffs):
     return np.array(z_scores)
 
 
-if __name__ == "__main__":
+def main(argv):
 
     #############################################
     ## Set up arguments #########################
     #############################################
 
     # pre-parse the arguments so that argparse doesn't interpret negative numbers (for y-min) as option flags.
-    for i, arg in enumerate(sys.argv):
+    for i, arg in enumerate(argv):
         if (arg[0] == "-") and arg[1].isdigit():
-            sys.argv[i] = " " + arg
+            argv[i] = " " + arg
 
     # parse the arguments
     parse = argparse.ArgumentParser(
@@ -313,9 +315,9 @@ if __name__ == "__main__":
     # front and back refer to how many nucleotides should be masked at the 5' and 3' end, respectively.
     front = args.mask5
     back = args.mask3
-    
+
     sep = args.sep
-    
+
     # pad specifies how wide the smoothing window will be. Window size = 2*pad + 1
     pad = args.pad
 
@@ -422,11 +424,13 @@ if __name__ == "__main__":
     # this is mostly for figuring which regions to highlight in the plot.
 
     pos_consec, neg_consec = [], []
-    for k, g in groupby(enumerate([i for i in sigdiff if s_diff[i] >= 0]),
-                        lambda (i, x): i-x):
+    for k, g in groupby(
+        enumerate([i for i in sigdiff if s_diff[i] >= 0]), lambda i, x: i - x
+    ):
         pos_consec.append(map(itemgetter(1), g))
-    for k, g in groupby(enumerate([i for i in sigdiff if s_diff[i] < 0]),
-                        lambda (i, x): i-x):
+    for k, g in groupby(
+        enumerate([i for i in sigdiff if s_diff[i] < 0]), lambda i, x: i - x
+    ):
         neg_consec.append(map(itemgetter(1), g))
 
     pos_shade_bits, pos_x_bits = [], []
@@ -537,16 +541,16 @@ if __name__ == "__main__":
 
         # set ymin and ymax automatically from data, or from option flags.
         if args.ymin == -999:
-            y_min = min(filter(lambda x: np.isnan(x) == False, s_diff)) - 0.25
+            y_min = min(filter(lambda x: not np.isnan(x), s_diff)) - 0.25
         else:
             y_min = args.ymin
 
         if args.ymax == -999:
-            y_max = max(filter(lambda x: np.isnan(x) == False, s_diff)) + 0.25
+            y_max = max(filter(lambda x: not np.isnan(x), s_diff)) + 0.25
             # adjust y_max if dots are involved.
             if dots:
                 y_max = (
-                    max(filter(lambda x: np.isnan(x) == False, s_diff)) + 0.6
+                    max(filter(lambda x: not np.isnan(x), s_diff)) + 0.6
                 )
         else:
             y_max = args.ymax
@@ -651,3 +655,7 @@ if __name__ == "__main__":
         # write the output
         o.write(("\t").join(map(str, i)) + "\n")
     o.close()
+
+
+if __name__ == "__main__":
+    main(sys.argv)
