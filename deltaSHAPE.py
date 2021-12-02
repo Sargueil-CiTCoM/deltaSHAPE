@@ -34,7 +34,7 @@ import warnings
 
 
 def open_map(filename, front, back, sep=None):
-    data = open(filename, "rU")
+    data = open(filename, "r")
     datalines = data.readlines()
     data.close()
     if len(datalines[0].split(sep)) < 4:
@@ -85,19 +85,19 @@ def smooth(data, err, pad):
         new_data.append(
             np.mean(
                 np.ma.MaskedArray(
-                    [j for j in data[i - pad: i + pad + 1]],
-                    np.isnan([j for j in data[i - pad: i + pad + 1]]),
+                    [j for j in data[i - pad : i + pad + 1]],
+                    np.isnan([j for j in data[i - pad : i + pad + 1]]),
                 )
             )
         )
 
         # use stats.nanmean to calculate average without including no-data (nan) nucleotides. This causes long_scalars runtime warnings.
         # new_data.append(stats.nanmean([j for j in data[i-pad:i+pad+1] if np.isnan(j) != True]))
-        errs = np.array(err[i - pad: i + pad + 1])
+        errs = np.array(err[i - pad : i + pad + 1])
         squerrs = np.power([j for j in errs if not np.isnan(j)], 2)
         total = np.sum(squerrs)
         sqrt = np.sqrt(total)
-        new_err.append(sqrt / len(data[i - pad: i + pad + 1]))
+        new_err.append(sqrt / len(data[i - pad : i + pad + 1]))
     for i in range(pad):
         new_data.append(np.nan)
         new_err.append(np.nan)
@@ -424,14 +424,18 @@ def main(argv):
     # this is mostly for figuring which regions to highlight in the plot.
 
     pos_consec, neg_consec = [], []
+    print(list(enumerate([i for i in sigdiff if s_diff[i] >= 0])))
     for k, g in groupby(
-        enumerate([i for i in sigdiff if s_diff[i] >= 0]), lambda i, x: i - x
+        enumerate([i for i in sigdiff if s_diff[i] >= 0]),
+        lambda tp: tp[0] - tp[1],
     ):
-        pos_consec.append(map(itemgetter(1), g))
+        pos_consec.append(list(map(itemgetter(1), g)))
+
     for k, g in groupby(
-        enumerate([i for i in sigdiff if s_diff[i] < 0]), lambda i, x: i - x
+        enumerate([i for i in sigdiff if s_diff[i] < 0]),
+        lambda tp: tp[0] - tp[1],
     ):
-        neg_consec.append(map(itemgetter(1), g))
+        neg_consec.append(list(map(itemgetter(1), g)))
 
     pos_shade_bits, pos_x_bits = [], []
     pos_span = []
@@ -549,9 +553,7 @@ def main(argv):
             y_max = max(filter(lambda x: not np.isnan(x), s_diff)) + 0.25
             # adjust y_max if dots are involved.
             if dots:
-                y_max = (
-                    max(filter(lambda x: not np.isnan(x), s_diff)) + 0.6
-                )
+                y_max = max(filter(lambda x: not np.isnan(x), s_diff)) + 0.6
         else:
             y_max = args.ymax
 
