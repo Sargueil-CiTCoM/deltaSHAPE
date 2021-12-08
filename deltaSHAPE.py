@@ -247,6 +247,16 @@ def main(argv):
         help="Save plot as PDF. If output file is given, PDF will have same prefix. Default: OFF",
     )
     out_opt.add_argument(
+        "--svg",
+        action="store_true",
+        help="Save plot as SVG. If output file is given, SVG will have same prefix. Default: OFF",
+    )
+    out_opt.add_argument(
+        "--png",
+        action="store_true",
+        help="Save plot as PNG. If output file is given, PNG will have same prefix. Default: OFF",
+    )
+    out_opt.add_argument(
         "--noshow",
         action="store_true",
         help="Generate the plot but do not show it. Typically used with --pdf. Default: display plot",
@@ -299,6 +309,12 @@ def main(argv):
         type=float,
         default=-999,
         help="Set plot x-axis maximum. Default: Determined automatically",
+    )
+    out_opt.add_argument(
+        "--title",
+        type=str,
+        default=None,
+        help="Set plot title Default: None",
     )
 
     help_opt = parse.add_argument_group("Help")
@@ -359,6 +375,11 @@ def main(argv):
     if args.pdf:
         # pdf_file = str(os.path.basename(os.path.normpath(args.out)).split('.')[:-1][0])+".pdf"
         pdf_file = str(os.path.normpath(args.out)).split(".")[0] + ".pdf"
+
+    if args.svg:
+        svg_file = str(os.path.normpath(args.out)).split(".")[0] + ".svg"
+    if args.png:
+        png_file = str(os.path.normpath(args.out)).split(".")[0] + ".png"
 
     # check other variables
     if args.ymin > args.ymax:
@@ -424,7 +445,6 @@ def main(argv):
     # this is mostly for figuring which regions to highlight in the plot.
 
     pos_consec, neg_consec = [], []
-    print(list(enumerate([i for i in sigdiff if s_diff[i] >= 0])))
     for k, g in groupby(
         enumerate([i for i in sigdiff if s_diff[i] >= 0]),
         lambda tp: tp[0] - tp[1],
@@ -450,6 +470,7 @@ def main(argv):
                     i + 1,
                     seq1[i],
                     s_diff[i],
+                    s_diff[i],
                     z_factors[i],
                     z_scores[i],
                     s_data1[i],
@@ -474,6 +495,7 @@ def main(argv):
                 [
                     i + 1,
                     seq1[i],
+                    s_diff[i],
                     s_diff[i],
                     z_factors[i],
                     z_scores[i],
@@ -588,6 +610,7 @@ def main(argv):
         plt.xlabel("Nucleotide")
         plt.ylabel(r"$\Delta$SHAPE")
         plt.tick_params(which="both", direction="out", top="off", right="off")
+        plt.title(args.title)
 
         # turn off UserWarnings temporarily so that plt.tight_layout() doesn't print a warning to the screen.
         warnings.simplefilter("ignore", UserWarning)
@@ -598,6 +621,10 @@ def main(argv):
 
         if args.pdf:
             plt.savefig(pdf_file, format="pdf")
+        if args.svg:
+            plt.savefig(svg_file, format="svg")
+        if args.png:
+            plt.savefig(png_file, format="png")
         if not args.noshow:
             plt.show()
 
@@ -613,6 +640,7 @@ def main(argv):
                     i + 1,
                     seq1[i],
                     0,
+                    s_diff[i],
                     z_factors[i],
                     z_scores[i],
                     s_data1[i],
@@ -627,11 +655,12 @@ def main(argv):
     o = open(outfile, "w")
     # write header
     o.write(
-        "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"
+        "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"
         % (
             "Nuc",
             "Seq",
             "DeltaSHAPE",
+            "DeltaSHAPE_all",
             "Z-factor",
             "Std_Score",
             "Smoothed_Data1",
