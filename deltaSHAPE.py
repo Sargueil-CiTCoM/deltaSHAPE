@@ -374,12 +374,12 @@ def main(argv):
     outfile = os.path.normpath(args.out)
     if args.pdf:
         # pdf_file = str(os.path.basename(os.path.normpath(args.out)).split('.')[:-1][0])+".pdf"
-        pdf_file = str(os.path.normpath(args.out)).split(".")[0] + ".pdf"
+        pdf_file = os.path.splitext(args.out)[0] + ".pdf"
 
     if args.svg:
-        svg_file = str(os.path.normpath(args.out)).split(".")[0] + ".svg"
+        svg_file = os.path.splitext(args.out)[0] + ".svg"
     if args.png:
-        png_file = str(os.path.normpath(args.out)).split(".")[0] + ".png"
+        png_file = os.path.splitext(args.out)[0] + ".png"
 
     # check other variables
     if args.ymin > args.ymax:
